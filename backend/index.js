@@ -3,16 +3,23 @@ const cors = require("cors");
 require("dotenv").config();
 
 const db = require("./config/db");
+const bookRoutes = require("./routes/bookRoutes");
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.get("/", (req, res) => {
-  res.send("Backend OK 🚀");
+  res.status(200).send("Backend OK 🚀");
 });
 
+app.use("/api/books", bookRoutes);
+
+// Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port " + PORT);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
