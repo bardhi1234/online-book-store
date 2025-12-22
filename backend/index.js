@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const db = require("./config/db");
-const bookRoutes = require("./routes/bookRoutes"); // ✅ vetëm një herë
+const bookRoutes = require("./routes/bookRoutes");
 
 const app = express();
 
