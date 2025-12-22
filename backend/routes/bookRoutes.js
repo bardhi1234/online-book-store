@@ -4,12 +4,16 @@ const router = express.Router();
 const {
   getAllBooks,
   createBook,
+  deleteBook,
 } = require("../controllers/books.controller");
 
-// GET books
+// GET all books
 router.get("/", getAllBooks);
 
-// POST book
+// POST new book
 router.post("/", createBook);
+
+// DELETE book by id
+router.delete("/:id", deleteBook);
 
 module.exports = router;
