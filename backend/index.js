@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const db = require("./config/db");
-const bookRoutes = require("./routes/bookRoutes");
+const bookRoutes = require("./routes/bookRoutes"); // ✅ vetëm një herë
 
 const app = express();
 
@@ -11,11 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Test route
 app.get("/", (req, res) => {
   res.status(200).send("Backend OK 🚀");
 });
 
+// Books routes
 app.use("/api/books", bookRoutes);
 
 // Server

@@ -1,5 +1,6 @@
 const db = require("../config/db");
 
+// GET all books
 exports.getAllBooks = (req, res) => {
   const sql = "SELECT * FROM books";
 
@@ -7,6 +8,6 @@ exports.getAllBooks = (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json(results);
+    res.status(200).json(results);
   });
 };
