@@ -8,16 +8,14 @@ const {
   deleteBook,
 } = require("../controllers/books.controller");
 
-const { protect } = require("../middleware/auth.middleware");
+const authMiddleware = require("../middlewares/auth.middleware");
 
 // PUBLIC – kushdo mund t'i shoh librat
 router.get("/", getAllBooks);
 
 // PROTECTED – duhet JWT
-router.post("/", protect, createBook);
-router.put("/:id", protect, updateBook);
-router.delete("/:id", protect, deleteBook);
+router.post("/", authMiddleware, createBook);
+router.put("/:id", authMiddleware, updateBook);
+router.delete("/:id", authMiddleware, deleteBook);
 
 module.exports = router;
-
-const authMiddleware = require("../middlewares/auth.middleware");
