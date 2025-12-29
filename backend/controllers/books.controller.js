@@ -1,89 +1,47 @@
 const db = require("../config/db");
 
-// GET all books
+// GET ALL BOOKS
 exports.getAllBooks = (req, res) => {
-  const sql = "SELECT * FROM books";
-
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Database error" });
-    }
-    res.status(200).json(results);
+  db.query("SELECT * FROM books", (err, results) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+    res.json(results);
   });
 };
 
-// POST new book
+// CREATE BOOK
 exports.createBook = (req, res) => {
-  const { title, author, description, price, stock, image_url } = req.body;
+  const { title, author, price } = req.body;
 
-  const sql = `
-    INSERT INTO books (title, author, description, price, stock, image_url)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
+  const sql =
+    "INSERT INTO books (title, author, price) VALUES (?, ?, ?)";
 
-  db.query(
-    sql,
-    [title, author, description, price, stock || 0, image_url],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Failed to create book" });
-      }
-
-      res.status(201).json({
-        message: "Book created successfully",
-        bookId: result.insertId,
-      });
-    }
-  );
-};
-
-// DELETE book by ID
-exports.deleteBook = (req, res) => {
-  const { id } = req.params;
-
-  const sql = "DELETE FROM books WHERE id = ?";
-
-  db.query(sql, [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Failed to delete book" });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    res.status(200).json({ message: "Book deleted successfully" });
+  db.query(sql, [title, author, price], (err) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+    res.status(201).json({ message: "Book created" });
   });
 };
 
-// UPDATE book
+// UPDATE BOOK
 exports.updateBook = (req, res) => {
-  const { id } = req.params;
-  const { title, author, description, price, stock, image_url } = req.body;
+  const { title, author, price } = req.body;
 
-  const sql = `
-    UPDATE books
-    SET title = ?, author = ?, description = ?, price = ?, stock = ?, image_url = ?
-    WHERE id = ?
-  `;
+  const sql =
+    "UPDATE books SET title=?, author=?, price=? WHERE id=?";
 
+  db.query(sql, [title, author, price, req.params.id], (err) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+    res.json({ message: "Book updated" });
+  });
+};
+
+// DELETE BOOK
+exports.deleteBook = (req, res) => {
   db.query(
-    sql,
-    [title, author, description, price, stock, image_url, id],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Failed to update book" });
-      }
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Book not found" });
-      }
-
-      res.status(200).json({ message: "Book updated successfully" });
+    "DELETE FROM books WHERE id=?",
+    [req.params.id],
+    (err) => {
+      if (err) return res.status(500).json({ message: "DB error" });
+      res.json({ message: "Book deleted" });
     }
   );
 };
