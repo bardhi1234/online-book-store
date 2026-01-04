@@ -3,39 +3,37 @@ import { useNavigate } from "react-router-dom";
 
 function Books() {
   const navigate = useNavigate();
-
   const [user, setUser] = useState(null);
   const [books, setBooks] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+
+  const BASE_URL = "http://localhost:5000/api";
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-
     if (!storedUser || !token) {
       navigate("/");
       return;
     }
-
     setUser(JSON.parse(storedUser));
     fetchBooks();
   }, [navigate]);
 
   const fetchBooks = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/books");
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/books`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        setError("Failed to fetch books");
-        setLoading(false);
-        return;
-      }
-
+      if (!res.ok) throw new Error("Failed to fetch books");
       setBooks(data);
     } catch (err) {
-      setError("Server error");
+      setError(err.message || "Server error");
     } finally {
       setLoading(false);
     }
@@ -47,38 +45,270 @@ function Books() {
     navigate("/");
   };
 
+  const addBook = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${BASE_URL}/books`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title, author }),
+      });
+      if (!res.ok) throw new Error("Failed to add book");
+      setTitle("");
+      setAuthor("");
+      fetchBooks();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const editBook = async (book) => {
+    const newTitle = prompt("New Title:", book.title);
+    const newAuthor = prompt("New Author:", book.author);
+    if (!newTitle || !newAuthor) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/books/${book._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: newTitle, author: newAuthor }),
+      });
+      if (!res.ok) throw new Error("Failed to update book");
+      fetchBooks();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const deleteBook = async (id) => {
+    try {
+      const res = await fetch(`${BASE_URL}/books/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to delete book");
+      fetchBooks();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Books 📚</h1>
+    <div style={styles.container}>
+      {/* HEADER */}
+      <header style={styles.header}>
+        <div style={styles.logo}>📚 MyBookStore</div>
+        <nav style={styles.nav}>
+          <a href="/" style={styles.navLink}>Home</a>
+          <a href="/books" style={styles.navLink}>Books</a>
+          <a href="#about" style={styles.navLink}>About</a>
+          <a href="#contact" style={styles.navLink}>Contact</a>
+        </nav>
+        <div style={styles.userInfo}>
+          {user && (
+            <p>
+              <strong>{user.name}</strong> ({user.role})
+            </p>
+          )}
+          <button style={styles.logoutBtn} onClick={logout}>
+            Logout
+          </button>
+        </div>
+      </header>
 
-      {user && (
-        <>
-          <p>
-            Welcome <strong>{user.name}</strong>
-          </p>
-          <p>Email: {user.email}</p>
-          <p>Role: {user.role}</p>
-        </>
-      )}
+      {/* BOOKS */}
+      {loading && <p style={styles.loading}>Loading books...</p>}
+      {error && <p style={styles.error}>{error}</p>}
+      {!loading && books.length === 0 && <p style={styles.noBooks}>No books found</p>}
 
-      <button onClick={logout}>Logout</button>
-
-      <hr />
-
-      {loading && <p>Loading books...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {!loading && books.length === 0 && <p>No books found</p>}
-
-      <ul>
+      <div style={styles.booksGrid}>
         {books.map((book) => (
-          <li key={book.id}>
-            <strong>{book.title}</strong> – {book.author} – €{book.price}
-          </li>
+          <div
+            key={book._id}
+            style={styles.bookCard}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            <h3 style={styles.bookTitle}>{book.title}</h3>
+            <p style={styles.bookAuthor}>Author: {book.author}</p>
+            {book.price && <p style={styles.bookPrice}>Price: €{book.price}</p>}
+            <div style={styles.btnGroup}>
+              <button style={styles.editBtn} onClick={() => editBook(book)}>
+                Edit
+              </button>
+              <button style={styles.deleteBtn} onClick={() => deleteBook(book._id)}>
+                Delete
+              </button>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
+
+      {/* ADD BOOK */}
+      <div style={styles.addBookSection}>
+        <h3>Add New Book</h3>
+        <form onSubmit={addBook} style={styles.addForm}>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="Author"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            required
+          />
+          <button type="submit" style={styles.addBtn}>
+            Add Book
+          </button>
+        </form>
+      </div>
+
+      {/* ABOUT SECTION */}
+      <section id="about" style={styles.aboutSection}>
+        <h2>About MyBookStore</h2>
+        <p>
+          MyBookStore is a modern online book platform where you can browse, add, edit, and delete your favorite books.
+          Built with React, modern design patterns, and secure authentication.
+        </p>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={styles.footer}>
+        <p>© 2026 MyBookStore. All rights reserved.</p>
+        <p>
+          Built with ❤️ by <strong>Bardh Dajaku</strong>
+        </p>
+      </footer>
     </div>
   );
 }
+
+// --- STYLES ---
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    padding: "20px",
+    background: "linear-gradient(135deg, #667eea, #764ba2)",
+    minHeight: "100vh",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "15px 25px",
+    borderRadius: "12px",
+    background: "rgba(255,255,255,0.1)",
+    backdropFilter: "blur(15px)",
+    color: "#fff",
+    marginBottom: "25px",
+  },
+  logo: { fontSize: "28px", fontWeight: "bold" },
+  nav: { display: "flex", gap: "20px" },
+  navLink: {
+    color: "#fff",
+    textDecoration: "none",
+    fontWeight: "500",
+    transition: "0.3s",
+  },
+  userInfo: { textAlign: "right" },
+  logoutBtn: {
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    padding: "6px 12px",
+    cursor: "pointer",
+    marginTop: "5px",
+  },
+  loading: { textAlign: "center", color: "#fff" },
+  error: { color: "#ff6b6b", fontWeight: "bold", textAlign: "center" },
+  noBooks: { textAlign: "center", color: "#fff" },
+  booksGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" },
+  bookCard: {
+    background: "rgba(255,255,255,0.1)",
+    backdropFilter: "blur(10px)",
+    padding: "15px",
+    borderRadius: "12px",
+    color: "#fff",
+    transition: "transform 0.3s, box-shadow 0.3s",
+    boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
+  },
+  bookTitle: { marginBottom: "8px", fontWeight: "700" },
+  bookAuthor: { marginBottom: "8px", color: "#dcdcdc" },
+  bookPrice: { marginBottom: "8px", fontWeight: "bold" },
+  btnGroup: { display: "flex", justifyContent: "space-between" },
+  editBtn: {
+    backgroundColor: "#3498db",
+    color: "#fff",
+    border: "none",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  deleteBtn: {
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+    border: "none",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  addBookSection: {
+    marginTop: "30px",
+    padding: "20px",
+    borderRadius: "12px",
+    background: "rgba(255,255,255,0.1)",
+    backdropFilter: "blur(10px)",
+    color: "#fff",
+  },
+  addForm: { display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" },
+  input: {
+    flex: "1",
+    minWidth: "150px",
+    padding: "10px 15px",
+    borderRadius: "8px",
+    border: "none",
+    outline: "none",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff",
+  },
+  addBtn: {
+    background: "linear-gradient(135deg, #43e97b, #38f9d7)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    padding: "10px 16px",
+    cursor: "pointer",
+  },
+  aboutSection: {
+    marginTop: "40px",
+    padding: "25px",
+    borderRadius: "12px",
+    background: "rgba(255,255,255,0.1)",
+    backdropFilter: "blur(10px)",
+    color: "#fff",
+    textAlign: "center",
+  },
+  footer: {
+    textAlign: "center",
+    marginTop: "40px",
+    padding: "20px",
+    color: "#fff",
+    fontSize: "14px",
+  },
+};
 
 export default Books;
