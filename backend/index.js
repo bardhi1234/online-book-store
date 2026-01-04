@@ -18,3 +18,6 @@ app.use("/api/users", usersRoutes);
 app.listen(process.env.PORT || 5000, () => {
   console.log("🚀 Server running");
 });
+
+const ordersRouter = require("./routes/orders.routes");
+app.use("/orders", ordersRouter);
