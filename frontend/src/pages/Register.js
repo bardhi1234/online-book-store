@@ -56,7 +56,7 @@ function Register() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            style={styles.input}
+            style={name ? styles.input : { ...styles.input, borderColor: "#fff" }}
           />
           <input
             type="email"
@@ -64,7 +64,7 @@ function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={styles.input}
+            style={email ? styles.input : { ...styles.input, borderColor: "#fff" }}
           />
           <input
             type="password"
@@ -72,7 +72,7 @@ function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={styles.input}
+            style={password ? styles.input : { ...styles.input, borderColor: "#fff" }}
           />
           <button type="submit" style={styles.button} disabled={loading}>
             {loading ? "Registering..." : "Register"}
@@ -141,13 +141,6 @@ const styles = {
     cursor: "pointer",
     fontSize: "16px",
     transition: "0.3s",
-  },
-  buttonHover: {
-    transform: "scale(1.05)",
-  },
-  inputFocus: {
-    border: "1px solid #43e97b",
-    background: "rgba(255,255,255,0.15)",
   },
   error: {
     color: "#ff6b6b",
