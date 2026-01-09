@@ -1,21 +1,22 @@
+// routes/orders.routes.js
 const express = require("express");
 const router = express.Router();
 
 const {
-  getAllBooks,
-  createBook,
-  updateBook,
-  deleteBook,
-} = require("../controllers/books.controller");
+  createOrder,
+  getOrders,
+  updateOrderStatus
+} = require("../controllers/orders.controller");
 
 const { authMiddleware, isAdmin } = require("../middlewares/auth.middleware");
 
-// GET ALL BOOKS - open for all
-router.get("/", getAllBooks);
+// Create order (user only)
+router.post("/", authMiddleware, createOrder);
 
-// CREATE, UPDATE, DELETE - only admin
-router.post("/", authMiddleware, isAdmin, createBook);
-router.put("/:id", authMiddleware, isAdmin, updateBook);
-router.delete("/:id", authMiddleware, isAdmin, deleteBook);
+// Get orders (user gets only theirs, admin gets all)
+router.get("/", authMiddleware, getOrders);
+
+// Update order status (admin only)
+router.put("/:id", authMiddleware, isAdmin, updateOrderStatus);
 
 module.exports = router;

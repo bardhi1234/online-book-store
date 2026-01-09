@@ -19,7 +19,13 @@ exports.createBook = async (req, res) => {
       [title, author, price || null, image]
     );
 
-    res.status(201).json({ id: result.insertId, title, author, price, image });
+    res.status(201).json({
+      id: result.insertId,
+      title,
+      author,
+      price,
+      image,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -31,7 +37,10 @@ exports.updateBook = async (req, res) => {
   const { title, author, price } = req.body;
 
   try {
-    await db.execute("UPDATE books SET title = ?, author = ?, price = ? WHERE id = ?", [title, author, price, id]);
+    await db.execute(
+      "UPDATE books SET title = ?, author = ?, price = ? WHERE id = ?",
+      [title, author, price, id]
+    );
     res.json({ message: "Book updated" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -49,13 +58,3 @@ exports.deleteBook = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-
-const { title, author, price } = req.body;
-const image = req.file ? req.file.filename : null;
-
-const sql = "INSERT INTO books (title, author, price, image) VALUES (?, ?, ?, ?)";
-db.query(sql, [title, author, price, image], (err, result) => {
-  if (err) return res.status(500).json({ message: err.message });
-  res.status(201).json({ message: "Book added", bookId: result.insertId });
-});
