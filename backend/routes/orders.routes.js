@@ -1,22 +1,19 @@
-// routes/orders.routes.js
 const express = require("express");
 const router = express.Router();
 
-const {
-  createOrder,
-  getOrders,
-  updateOrderStatus
-} = require("../controllers/orders.controller");
-
+const { createOrder, getOrders, updateOrderStatus, deleteOrder } = require("../controllers/orders.controller");
 const { authMiddleware, isAdmin } = require("../middlewares/auth.middleware");
 
-// Create order (user only)
+// CREATE ORDER (user)
 router.post("/", authMiddleware, createOrder);
 
-// Get orders (user gets only theirs, admin gets all)
+// GET ORDERS (user = vetëm të tyre, admin = të gjitha)
 router.get("/", authMiddleware, getOrders);
 
-// Update order status (admin only)
+// UPDATE STATUS (admin only)
 router.put("/:id", authMiddleware, isAdmin, updateOrderStatus);
+
+// DELETE ORDER (admin only)
+router.delete("/:id", authMiddleware, isAdmin, deleteOrder);
 
 module.exports = router;
