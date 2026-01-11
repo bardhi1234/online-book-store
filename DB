@@ -1,0 +1,106 @@
+-- ==========================
+-- TABLE: users
+-- ==========================
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(100) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `role` ENUM('user','admin') DEFAULT 'user',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================
+-- TABLE: books
+-- ==========================
+CREATE TABLE IF NOT EXISTS `books` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(150) NOT NULL,
+  `author` VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `price` FLOAT NOT NULL,
+  `stock` INT DEFAULT 0,
+  `image_url` VARCHAR(255),
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================
+-- TABLE: orders
+-- ==========================
+CREATE TABLE IF NOT EXISTS `orders` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `total` FLOAT NOT NULL,
+  `status` ENUM('pending','paid','shipped','cancelled') DEFAULT 'pending',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================
+-- TABLE: order_items
+-- ==========================
+CREATE TABLE IF NOT EXISTS `order_items` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `order_id` INT NOT NULL,
+  `book_id` INT NOT NULL,
+  `quantity` INT NOT NULL,
+  `price` FLOAT NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `order_id` (`order_id`),
+  KEY `book_id` (`book_id`),
+  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`book_id`) REFERENCES `books`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================
+-- SAMPLE DATA
+-- ==========================
+
+-- Users
+INSERT INTO `users` (`name`, `email`, `password`, `role`) VALUES
+('Admin User', 'admin@test.com', '123456', 'admin'),
+('Normal User', 'user@test.com', '123456', 'user');
+
+-- Books
+INSERT INTO `books` (`title`, `author`, `description`, `price`, `stock`) VALUES
+('Book 1', 'Author A', 'Description 1', 20, 10),
+('Book 2', 'Author B', 'Description 2', 15, 5),
+('Book 3', 'Author C', 'Description 3', 30, 8);
+
+CREATE TABLE IF NOT EXISTS books (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  author VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  stock INT NOT NULL DEFAULT 0,
+  image VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+SELECT u.id, u.name, u.email, u.role,
+  EXISTS(SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status = 'pending') AS hasActiveOrders
+FROM users u;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
