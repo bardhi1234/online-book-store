@@ -1,55 +1,33 @@
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const dotenv = require("dotenv");
+const path = require("path");
 const mysql = require("mysql2/promise");
 
-const authRoutes = require("./routes/auth.routes");   // supozon që e ke
-const bookRoutes = require("./routes/bookRoutes");    // supozon që e ke
-const ordersRoutes = require("./routes/orders.routes");
-
+dotenv.config();
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Database connection (mysql2 pool)
-const initDB = async () => {
-  try {
-    const db = await mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    });
-
-    app.locals.db = db;
-    console.log("DB Connected");
-  } catch (err) {
-    console.error("DB connection error:", err);
-  }
-};
-
-initDB();
-
-// Test route
-app.get("/", (req, res) => {
-  res.send("API is running...");
+// Database
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306,
 });
+app.locals.db = db;
 
 // Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/books", bookRoutes);
-app.use("/api/orders", ordersRoutes);
+app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/books", require("./routes/books.Routes"));
+app.use("/api/orders", require("./routes/orders.routes"));
+app.use("/api/users", require("./routes/users.routes")); // ✅ MUST exist
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Server error" });
-});
+// Serve uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Start server
 const PORT = process.env.PORT || 5000;

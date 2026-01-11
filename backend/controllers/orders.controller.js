@@ -1,3 +1,6 @@
+// controllers/orders.controller.js
+
+// CREATE ORDER
 const createOrder = async (req, res) => {
   const db = req.app.locals.db;
   const { items } = req.body;
@@ -7,30 +10,39 @@ const createOrder = async (req, res) => {
   }
 
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+    const userId = req.user.id;
+    let total = 0;
+
+    // Kontrollo stock dhe përllogarit totalin
+    for (const item of items) {
+      const [rows] = await db.execute("SELECT price, stock, title FROM books WHERE id = ?", [item.book_id]);
+      const book = rows[0];
+      if (!book) return res.status(404).json({ message: `Book ${item.book_id} not found` });
+      if (item.quantity > book.stock) {
+        return res.status(400).json({ message: `Not enough stock for book ${book.title}. Available: ${book.stock}` });
+      }
+      total += book.price * item.quantity;
     }
 
-    // Totali i porosisë
-    const total = items.reduce((acc, i) => acc + (i.price ?? 0) * (i.quantity ?? 0), 0);
-
     // Fut porosinë në tabelën orders
-    const [result] = await db.execute(
+    const [orderResult] = await db.execute(
       "INSERT INTO orders (user_id, total, status) VALUES (?, ?, ?)",
       [userId, total, "pending"]
     );
+    const orderId = orderResult.insertId;
 
-    const orderId = result.insertId;
-
-    // Fut artikujt në order_items
+    // Fut item-et dhe redukto stock
     for (const item of items) {
-      if (!item.book_id) continue;
+      const [rows] = await db.execute("SELECT price, stock FROM books WHERE id = ?", [item.book_id]);
+      const book = rows[0];
 
       await db.execute(
         "INSERT INTO order_items (order_id, book_id, quantity, price) VALUES (?, ?, ?, ?)",
-        [orderId, item.book_id, item.quantity ?? 1, item.price ?? 0]
+        [orderId, item.book_id, item.quantity, book.price]
       );
+
+      const newStock = book.stock - item.quantity;
+      await db.execute("UPDATE books SET stock = ? WHERE id = ?", [newStock, item.book_id]);
     }
 
     res.status(201).json({ message: "Order submitted successfully", orderId });
@@ -40,83 +52,65 @@ const createOrder = async (req, res) => {
   }
 };
 
+// GET ORDERS
 const getOrders = async (req, res) => {
   const db = req.app.locals.db;
+  const userId = req.user.id;
+  const isAdmin = req.user.role === "admin";
 
   try {
-    let orderRows;
-
-    if (req.user.role === "admin") {
-      [orderRows] = await db.execute(
-        "SELECT o.*, u.name as user_name FROM orders o JOIN users u ON o.user_id = u.id ORDER BY o.created_at DESC"
-      );
+    let rows;
+    if (isAdmin) {
+      [rows] = await db.execute("SELECT * FROM orders ORDER BY created_at DESC");
     } else {
-      [orderRows] = await db.execute(
-        "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC",
-        [req.user.id]
-      );
+      [rows] = await db.execute("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", [userId]);
     }
-
-    // marrim items për secilën porosi
-    const orders = await Promise.all(
-      orderRows.map(async (order) => {
-        const [items] = await db.execute(
-          `SELECT oi.book_id AS book_id, oi.quantity, oi.price, b.title
-           FROM order_items oi
-           JOIN books b ON oi.book_id = b.id
-           WHERE oi.order_id = ?`,
-          [order.id]
-        );
-        return { ...order, items };
-      })
-    );
-
-    res.json(orders);
+    res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+// UPDATE ORDER STATUS (admin only)
 const updateOrderStatus = async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!["pending", "shipped", "cancelled"].includes(status)) {
-    return res.status(400).json({ message: "Invalid status" });
-  }
+  const validStatuses = ["pending", "paid", "shipped", "cancelled"];
+  if (!validStatuses.includes(status)) return res.status(400).json({ message: "Invalid status" });
 
   try {
-    await db.execute("UPDATE orders SET status = ? WHERE id = ?", [status, id]);
-    res.json({ message: "Order status updated", status });
+    const [result] = await db.execute("UPDATE orders SET status = ? WHERE id = ?", [status, id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Order not found" });
+
+    res.json({ message: "Order status updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Funksioni për fshirjen e porosisë (vetëm admin)
+// DELETE ORDER (admin only)
 const deleteOrder = async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
 
   try {
-    // Fshi item-et e porosisë së parë
-    await db.execute("DELETE FROM order_items WHERE order_id = ?", [id]);
-
-    // Fshi porosinë
     const [result] = await db.execute("DELETE FROM orders WHERE id = ?", [id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Order not found" });
 
     res.json({ message: "Order deleted successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-module.exports = { createOrder, getOrders, updateOrderStatus, deleteOrder };
+module.exports = {
+  createOrder,
+  getOrders,
+  updateOrderStatus,
+  deleteOrder,
+};

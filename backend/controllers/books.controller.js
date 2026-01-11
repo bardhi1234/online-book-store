@@ -1,60 +1,81 @@
+const path = require("path");
+const fs = require("fs");
+
+// GET ALL BOOKS
 exports.getAllBooks = async (req, res) => {
   const db = req.app.locals.db;
   try {
-    const [books] = await db.execute("SELECT * FROM books");
-    res.json(books);
+    const [rows] = await db.execute("SELECT * FROM books");
+    res.json(rows);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+// CREATE BOOK
 exports.createBook = async (req, res) => {
   const db = req.app.locals.db;
-  const { title, author, price } = req.body;
-  const image = req.file ? req.file.filename : null;
+  let { title, author, price, stock } = req.body;
+  let image = req.file?.filename || null;
+
+  price = Number(price);
+  stock = Number(stock);
 
   try {
     const [result] = await db.execute(
-      "INSERT INTO books (title, author, price, image) VALUES (?, ?, ?, ?)",
-      [title, author, price || null, image]
+      "INSERT INTO books (title, author, price, stock, image) VALUES (?, ?, ?, ?, ?)",
+      [title, author, price, stock, image]
     );
-
-    res.status(201).json({
-      id: result.insertId,
-      title,
-      author,
-      price,
-      image,
-    });
+    res.status(201).json({ id: result.insertId, title, author, price, stock, image });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+// UPDATE BOOK
 exports.updateBook = async (req, res) => {
   const db = req.app.locals.db;
+  let { title, author, price, stock } = req.body;
   const { id } = req.params;
-  const { title, author, price } = req.body;
+
+  price = Number(price);
+  stock = Number(stock);
 
   try {
-    await db.execute(
-      "UPDATE books SET title = ?, author = ?, price = ? WHERE id = ?",
-      [title, author, price, id]
+    const [result] = await db.execute(
+      "UPDATE books SET title=?, author=?, price=?, stock=? WHERE id=?",
+      [title, author, price, stock, id]
     );
-    res.json({ message: "Book updated" });
+
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Book not found" });
+
+    res.json({ message: "Book updated", book: { id, title, author, price, stock } });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+// DELETE BOOK
 exports.deleteBook = async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
 
   try {
-    await db.execute("DELETE FROM books WHERE id = ?", [id]);
+    const [rows] = await db.execute("SELECT image FROM books WHERE id=?", [id]);
+    if (rows[0]?.image) {
+      const imagePath = path.join(__dirname, "..", "uploads", rows[0].image);
+      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    }
+
+    const [result] = await db.execute("DELETE FROM books WHERE id=?", [id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Book not found" });
+
     res.json({ message: "Book deleted" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };

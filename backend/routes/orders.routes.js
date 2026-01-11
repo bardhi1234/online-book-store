@@ -1,7 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
-const { createOrder, getOrders, updateOrderStatus, deleteOrder } = require("../controllers/orders.controller");
+const {
+  createOrder,
+  getOrders,
+  updateOrderStatus,
+  deleteOrder,
+} = require("../controllers/orders.controller");
+
 const { authMiddleware, isAdmin } = require("../middlewares/auth.middleware");
 
 // CREATE ORDER (user)
